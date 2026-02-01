@@ -252,7 +252,18 @@ function copyOne(){
     // دکمه کپی داخل Modal
     document.getElementById("modalCopy").onclick = () => {
         navigator.clipboard.writeText(cfg)
-            .then(()=> show("✅ کپی شد","#4caf50"))
+            .then(()=> {
+                show("✅ کپی شد","#4caf50");
+
+                // بعد از کپی، خط بعدی آماده شود
+                let nextCfg = pickFromBottomToTop();
+                if(nextCfg){
+                    modalText.value = nextCfg; // متن Modal بروزرسانی شود
+                    cfg = nextCfg;             // برای کپی بعدی
+                } else {
+                    modalText.value = "";       // اگر تمام شد خالی شود
+                }
+            })
             .catch(()=> show("❌ کپی نشد","#f44336"));
     };
 
@@ -266,6 +277,7 @@ function copyOne(){
         if(e.target === modal) modal.style.display = "none";
     };
 }
+
 let currentIndex = -1; // شروع از پایین فایل (آخرین خط)
 
 
