@@ -225,7 +225,6 @@ function updateUI(t){
 /* کپی */
 
 function copy(arr){
-
     if(!arr.length){
         show("❌ لیست خالی است","#f44336");
         return;
@@ -233,18 +232,16 @@ function copy(arr){
 
     let txt = arr.join("\n");
 
-    // 1. تلاش برای استفاده از Clipboard API مدرن
     if (navigator.clipboard && navigator.clipboard.writeText) {
-        navigator.clipboard.writeText(txt).then(()=>{
-            show("✅ کپی شد: "+arr.length,"#4caf50");
-        }).catch((err) => {
-            console.error("Clipboard API modern failed:", err);
-            // اگر روش مدرن شکست خورد، به روش قدیمی بروید
-            fallbackCopy(txt, arr.length);
+        navigator.clipboard.writeText(txt)
+        .then(()=> show("✅ کپی شد: "+arr.length,"#4caf50"))
+        .catch(()=> {
+            // موبایل یا مرورگر محدود است
+            prompt("⚠️ کپی نشد. لطفاً متن را دستی کپی کنید:", txt);
         });
     } else {
-        // اگر مرورگر اصلاً Clipboard API را ندارد
-        fallbackCopy(txt, arr.length);
+        // موبایل قدیمی یا execCommand پشتیبانی نمی‌کند
+        prompt("⚠️ کپی نشد. لطفاً متن را دستی کپی کنید:", txt);
     }
 }
 
