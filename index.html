@@ -256,29 +256,48 @@ function copyOne() {
 
     const modal = document.getElementById("copyModal");
     const modalText = document.getElementById("modalText");
-    modalText.value = cfg;
+
+    modal.style.display = "flex";       // اول نمایش Modal
+    modalText.value = cfg;               // بعد متن داخل textarea
+    autoCopyToClipboard(modalText);      // بعد کپی خودکار
+
     modalText.focus();
     modalText.select();
-    modal.style.display = "flex";
 
     // دکمه کپی
     document.getElementById("modalCopy").onclick = () => {
-        copyTextToClipboard(cfg);
+        autoCopyToClipboard(modalText); // با autoCopyToClipboard کپی شود
 
         let nextCfg = pickFromBottomToTop();
         if (nextCfg) {
             modalText.value = nextCfg;
-            modalText.focus();
-            modalText.select();
+            autoCopyToClipboard(modalText); // متن جدید هم خودکار کپی شود
             cfg = nextCfg;
         } else {
             modalText.value = "";
         }
     };
 
+    // بستن Modal
     document.getElementById("modalClose").onclick = () => modal.style.display = "none";
     modal.onclick = (e) => { if (e.target === modal) modal.style.display = "none"; };
 }
+
+function autoCopyToClipboard(textArea) {
+    textArea.focus();
+    textArea.select();
+    try {
+        if(navigator.clipboard && navigator.clipboard.writeText){
+            navigator.clipboard.writeText(textArea.value);
+        } else {
+            document.execCommand('copy'); // fallback برای موبایل
+        }
+        show("✅ کپی شد","#4caf50");
+    } catch(e){
+        show("❌ کپی نشد","#f44336");
+    }
+}
+
 
 
 
