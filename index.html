@@ -3,21 +3,22 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
 <title>کانفیگ رایگان حرفه‌ای</title>
-
 <style>
-
-body{
+body {
     font-family: Tahoma;
     background:#2e2e2e;
     color:#fff;
     margin:0;
     padding:20px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
 }
 
-.container{
+.container {
     max-width:600px;
+    width: 100%;
     margin:auto;
     background:#444;
     padding:25px;
@@ -26,17 +27,37 @@ body{
     box-shadow:0 0 20px #000;
 }
 
-h1{color:#4fc3f7}
+h1 { color:#4fc3f7; margin-bottom: 25px; }
 
-.button-group{
-    display:flex;
-    flex-wrap:wrap;
+.button-group {
+    display: flex;
+    flex-wrap: wrap;
     gap:10px;
-    justify-content:center;
+    justify-content: center;
+    margin-top: 20px;
 }
 
-.btn{
-    width:48%;
+/* دکمه بزرگ وسط صفحه اما جمع و جور */
+#one {
+    width: 30%;
+    padding: 18px;
+    font-size: 20px;
+    border-radius: 10px;
+    background: #4caf50;
+    color: #fff;
+    cursor: pointer;
+    margin-bottom: 15px;
+    transition: transform 0.2s, background 0.2s;
+}
+
+#one:hover {
+    background: #45a049;
+    transform: scale(1.05);
+}
+
+/* بقیه دکمه‌ها کوچک‌تر و پایین */
+.btn {
+    width: 48%;
     padding:12px;
     border:none;
     border-radius:8px;
@@ -44,28 +65,19 @@ h1{color:#4fc3f7}
     background:#2196f3;
     color:#fff;
     font-size:15px;
+    transition: transform 0.2s, background 0.2s;
 }
 
-.btn:hover{background:#1976d2}
-
-.green{background:#4caf50}
-.red{background:#f44336}
-
-.info{
-    background:#333;
-    padding:10px;
-    margin:15px 0;
-    border-radius:8px;
-}
-.support{
-    background:#25d366;
+.btn:hover { 
+    background:#1976d2;
+    transform: scale(1.05);
 }
 
-.support:hover{
-    background:#1da851;
-}
+.red{ background:#f44336; }
+.support{ background:#25d366; }
+.support:hover{ background:#1da851; }
 
-#msg{
+#msg {
     display:none;
     margin-top:15px;
     padding:10px;
@@ -73,256 +85,133 @@ h1{color:#4fc3f7}
     font-weight:bold;
 }
 
-.footer{
+.footer {
     margin-top:20px;
     font-size:14px;
     color:#ccc;
+    text-align: center;
+    font-weight: bold;
 }
-
 </style>
 </head>
-
 <body>
 
 <div class="container">
-
 <h1>کانفیگ رایگان📡</h1>
 
 <div class="info">
-📡 تعداد: <span id="count">0</span> |
-⏰ آخرین بروزرسانی: <span id="time">---</span>
+📡 تعداد: <span id="count">0</span> | ⏰ آخرین بروزرسانی: <span id="time">---</span>
 </div>
 
+<!-- دکمه جمع و جور وسط صفحه -->
+<button id="one">کپی تصادفی 1️⃣</button>
+
+<!-- بقیه دکمه‌ها -->
 <div class="button-group">
-
 <button class="btn green" id="refresh">🔄 بروزرسانی</button>
-<button class="btn" id="one">کپی 1️⃣</button>
-<button class="btn" id="five">کپی 5️⃣</button>
-<button class="btn support" id="support">
-💬 پشتیبانی تلگرام
-</button>
-
-<button class="btn" id="ten">کپی 🔟</button>
-<button class="btn" id="all">کپی همه🛰️</button>
+<button class="btn support" id="support">💬 پشتیبانی تلگرام</button>
 <button class="btn red" id="clear">🗑️ حذف کش</button>
-
 </div>
 
 <div id="msg"></div>
 
-<div class="footer" style="color: #000; background-color: #1976d2; border-radius: 5px; padding-bottom: 5px; " >
-نکته:اگر ربات خراب شد کش را حذف کنید!
-<br>کانفیگ ها به صورت تصادفی انتخاب میشوندی<br>
+<div class="footer" style="color: #000; background-color: #1976d2; border-radius: 5px; padding-bottom: 5px;">
+نکته: کانفیگ‌ها دونه‌دونه و تصادفی کپی می‌شوند<br>آخرین خطوط فایل در اولویت هستند
 </div>
-
 </div>
 
 <script>
-
-/* تنظیمات */
-
 const URL = "https://raw.githubusercontent.com/SoliSpirit/v2ray-configs/main/Countries/Us.txt";
-
 const CACHE = "VLESS_CACHE_PRO";
 const TIME = 30 * 60 * 1000;
-
 let configs = [];
 
-/* ابزار */
-
+// نمایش پیام
 function show(text,color){
-
     let m = document.getElementById("msg");
-
     m.innerText = text;
     m.style.background = color;
     m.style.display = "block";
-
-    setTimeout(()=>{
-        m.style.display="none";
-    },3000);
+    setTimeout(()=>{ m.style.display="none"; },3000);
 }
 
-function now(){
-    return new Date().toLocaleString("fa-IR");
-}
-
-function shuffle(arr){
-    return arr.sort(()=>Math.random()-0.5);
-}
-
-/* کش */
-
+// کش
 function save(){
-    localStorage.setItem(CACHE,JSON.stringify({
-        time:Date.now(),
-        list:configs
-    }));
+    localStorage.setItem(CACHE,JSON.stringify({time:Date.now(),list:configs}));
 }
-
 function loadCache(){
-
     let c = localStorage.getItem(CACHE);
-
     if(!c) return false;
-
     let data = JSON.parse(c);
-
     if(Date.now()-data.time > TIME) return false;
-
     configs = data.list;
-
     updateUI(data.time);
-
     show("⚡ از کش بارگذاری شد","#4caf50");
-
     return true;
 }
 
-/* دریافت */
-
+// دریافت فایل
 async function fetchData(){
-
     show("⏳ در حال دریافت...","#ff9800");
-
     try{
-
         let res = await fetch(URL);
-
         if(!res.ok) throw "error";
-
         let text = await res.text();
-
-        configs = text
-        .split("\n")
-        .map(l=>l.trim())
-        .filter(l=>/^(vless|vmess|trojan|ss):\/\//i.test(l));
-
+        configs = text.split("\n")
+            .map(l=>l.trim())
+            .filter(l=>/^(vless|vmess|trojan|ss):\/\//i.test(l));
         save();
-
         updateUI(Date.now());
-
         show("✅ موفق: "+configs.length,"#4caf50");
-
     }catch{
-
         show("❌ خطا در اتصال","#f44336");
     }
 }
 
-/* رابط */
-
+// بروزرسانی UI
 function updateUI(t){
-
     document.getElementById("count").innerText=configs.length;
-
-    document.getElementById("time").innerText=
-    new Date(t).toLocaleString("fa-IR");
+    document.getElementById("time").innerText=new Date(t).toLocaleString("fa-IR");
 }
 
-/* کپی */
-
-/* کپی */
-
-function copy(arr){
-    if(!arr.length){
+// انتخاب تصادفی از پایین فایل
+function pickRandomFromBottom(){
+    if(!configs.length){
         show("❌ لیست خالی است","#f44336");
-        return;
+        return null;
     }
+    let lastLines = configs.slice(-20);
+    return lastLines[Math.floor(Math.random()*lastLines.length)];
+}
 
-    let txt = arr.join("\n");
-
-    if (navigator.clipboard && navigator.clipboard.writeText) {
-        navigator.clipboard.writeText(txt)
-        .then(()=> show("✅ همه کپی شد: "+arr.length,"#4caf50"))
+// کپی دونه‌ای
+function copyOne(){
+    let cfg = pickRandomFromBottom();
+    if(!cfg) return;
+    if(navigator.clipboard && navigator.clipboard.writeText){
+        navigator.clipboard.writeText(cfg)
+        .then(()=> show("✅ کپی شد","#4caf50"))
         .catch(()=> {
-            // برای متن طولانی روی موبایل
-            show("⚠️ مرورگر اجازه کپی کامل نداد","#ff9800");
-            // نمایش در textarea برای انتخاب دستی
-            let area = document.createElement("textarea");
-            area.value = txt;
-            document.body.appendChild(area);
-            area.focus();
-            area.select();
-            alert("متن طولانی است، لطفاً دستی کپی کنید");
+            prompt("⚠️ کپی نشد. لطفاً دستی کپی کنید:", cfg);
         });
-    } else {
-        // موبایل قدیمی یا execCommand پشتیبانی نمی‌کند
-        let area = document.createElement("textarea");
-        area.value = txt;
-        document.body.appendChild(area);
-        area.focus();
-        area.select();
-        alert("کپی خودکار نشد، لطفاً دستی کپی کنید");
+    }else{
+        prompt("⚠️ کپی نشد. لطفاً دستی کپی کنید:", cfg);
     }
 }
 
-
-// تابع جایگزین برای کپی کردن
-function fallbackCopy(text, count) {
-    let textArea = document.createElement("textarea");
-    textArea.value = text;
-    
-    // این تنظیمات برای پنهان کردن textarea در صفحه ضروری است
-    textArea.style.position = "fixed";
-    textArea.style.top = "0";
-    textArea.style.left = "0";
-    textArea.style.opacity = "0";
-    
-    document.body.appendChild(textArea);
-    textArea.focus();
-    textArea.select();
-
-    try {
-        // اجرای دستور کپی
-        let successful = document.execCommand('copy');
-        if (successful) {
-            show(`✅ کپی شد (Fallback): ${count}`,"#4caf50");
-        } else {
-            show("❌ دستور کپی با شکست مواجه شد","#f44336");
-        }
-    } catch (err) {
-        show("❌ خطای کپی در Fallback","#f44336");
-        console.error('Fallback copy failed:', err);
-    }
-
-    document.body.removeChild(textArea);
-}
-
-
-/* شروع */
-
+// شروع
 document.addEventListener("DOMContentLoaded",()=>{
-
     if(!loadCache()) fetchData();
-
     document.getElementById("refresh").onclick=fetchData;
-
     document.getElementById("clear").onclick=()=>{
-
         localStorage.removeItem(CACHE);
-
         show("🗑️ کش حذف شد","#2196f3");
     };
-
-    document.getElementById("one").onclick=()=>copy(shuffle([...configs]).slice(0,1));
-
-    document.getElementById("five").onclick=()=>copy(shuffle([...configs]).slice(0,5));
-
-    document.getElementById("ten").onclick=()=>copy(shuffle([...configs]).slice(0,10));
-
-    document.getElementById("all").onclick=()=>copy(configs);
-
+    document.getElementById("one").onclick=copyOne;
+    document.getElementById("support").onclick=()=>{
+        window.open("https://t.me/BTC_ETH_DOG_SOL","_blank");
+    };
 });
-document.getElementById("support").onclick = ()=>{
-
-    window.open(
-        "https://t.me/BTC_ETH_DOG_SOL",
-        "_blank"
-    );
-
-};
-
 </script>
 
 </body>
