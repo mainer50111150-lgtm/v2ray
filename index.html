@@ -96,6 +96,36 @@ h1 { color:#4fc3f7; margin-bottom: 25px; }
 </head>
 <body>
 
+    <!-- Modal برای نمایش متن کپی -->
+<div id="copyModal" style="
+    display:none;
+    position:fixed;
+    top:0; left:0;
+    width:100%; height:100%;
+    background:rgba(0,0,0,0.6);
+    justify-content:center;
+    align-items:center;
+    z-index:99999;
+">
+    <div style="
+        background:#fff;
+        color:#000;
+        padding:20px;
+        border-radius:10px;
+        max-width:400px;
+        width:90%;
+        text-align:center;
+        position:relative;
+    ">
+        <h3>کانفیگ انتخاب شده</h3>
+        <textarea id="modalText" style="width:100%; height:120px; margin-top:10px; font-family:monospace; font-size:14px;" readonly></textarea>
+        <div style="margin-top:15px;">
+            <button id="modalCopy" style="padding:10px 20px; background:#4caf50; color:#fff; border:none; border-radius:5px; cursor:pointer;">کپی به کلیپ‌بورد</button>
+            <button id="modalClose" style="padding:10px 20px; background:#f44336; color:#fff; border:none; border-radius:5px; cursor:pointer;">بستن</button>
+        </div>
+    </div>
+</div>
+
 <div class="container">
 <h1>کانفیگ رایگان📡</h1>
 
@@ -186,20 +216,59 @@ function pickRandomFromBottom() {
     const randomIndex = Math.floor(Math.random() * bottomLines.length);
     return bottomLines[randomIndex];
 }
+function pickFromBottomToTop() {
+    if (!configs.length) {
+        show("❌ لیست خالی است","#f44336");
+        return null;
+    }
+
+    // اگر هنوز شروع نکردیم، از آخرین خط شروع کنیم
+    if (currentIndex === -1) {
+        currentIndex = configs.length - 1;
+    } else {
+        currentIndex--; // حرکت به سمت بالای فایل
+    }
+
+    if (currentIndex < 0) {
+        show("⚠️ تمام خطوط کپی شدند","#ff9800");
+        return null; // وقتی تمام خطوط کپی شدند
+    }
+
+    return configs[currentIndex];
+}
 
 
 // کپی دونه‌ای
 function copyOne(){
-    let cfg = pickRandomFromBottom();
+    let cfg = pickFromBottomToTop();
     if(!cfg) return;
-    if(navigator.clipboard && navigator.clipboard.writeText){
+
+    // نمایش در Modal
+    const modal = document.getElementById("copyModal");
+    const modalText = document.getElementById("modalText");
+    modalText.value = cfg;
+    modal.style.display = "flex";
+
+    // دکمه کپی داخل Modal
+    document.getElementById("modalCopy").onclick = () => {
         navigator.clipboard.writeText(cfg)
-        .then(()=> show("✅ کپی شد","#4caf50"))
-        .catch(()=> prompt("⚠️ کپی نشد. لطفاً دستی کپی کنید:", cfg));
-    }else{
-        prompt("⚠️ کپی نشد. لطفاً دستی کپی کنید:", cfg);
-    }
+            .then(()=> show("✅ کپی شد","#4caf50"))
+            .catch(()=> show("❌ کپی نشد","#f44336"));
+    };
+
+    // دکمه بستن Modal
+    document.getElementById("modalClose").onclick = () => {
+        modal.style.display = "none";
+    };
+
+    // کلیک روی پس‌زمینه Modal هم ببندد
+    modal.onclick = (e) => {
+        if(e.target === modal) modal.style.display = "none";
+    };
 }
+let currentIndex = -1; // شروع از پایین فایل (آخرین خط)
+
+
 
 // شروع
 document.addEventListener("DOMContentLoaded",()=>{
