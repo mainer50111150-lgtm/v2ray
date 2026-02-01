@@ -112,7 +112,7 @@ h1{color:#4fc3f7}
 
 <div class="footer" style="color: #000; background-color: #1976d2; border-radius: 5px; padding-bottom: 5px; " >
 نکته:اگر ربات خراب شد کش را حذف کنید!
-گانفیگ ها به صورت تصادفی انتخاب میشوند<br>
+<br>کانفیگ ها به صورت تصادفی انتخاب میشوندی<br>
 </div>
 
 </div>
@@ -234,16 +234,29 @@ function copy(arr){
 
     if (navigator.clipboard && navigator.clipboard.writeText) {
         navigator.clipboard.writeText(txt)
-        .then(()=> show("✅ کپی شد: "+arr.length,"#4caf50"))
+        .then(()=> show("✅ همه کپی شد: "+arr.length,"#4caf50"))
         .catch(()=> {
-            // موبایل یا مرورگر محدود است
-            prompt("⚠️ کپی نشد. لطفاً متن را دستی کپی کنید:", txt);
+            // برای متن طولانی روی موبایل
+            show("⚠️ مرورگر اجازه کپی کامل نداد","#ff9800");
+            // نمایش در textarea برای انتخاب دستی
+            let area = document.createElement("textarea");
+            area.value = txt;
+            document.body.appendChild(area);
+            area.focus();
+            area.select();
+            alert("متن طولانی است، لطفاً دستی کپی کنید");
         });
     } else {
         // موبایل قدیمی یا execCommand پشتیبانی نمی‌کند
-        prompt("⚠️ کپی نشد. لطفاً متن را دستی کپی کنید:", txt);
+        let area = document.createElement("textarea");
+        area.value = txt;
+        document.body.appendChild(area);
+        area.focus();
+        area.select();
+        alert("کپی خودکار نشد، لطفاً دستی کپی کنید");
     }
 }
+
 
 // تابع جایگزین برای کپی کردن
 function fallbackCopy(text, count) {
