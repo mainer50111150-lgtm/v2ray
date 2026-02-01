@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>کانفیگ رایگان حرفه‌ای</title>
+
+<style>
+
+body{
+    font-family: Tahoma;
+    background:#2e2e2e;
+    color:#fff;
+    margin:0;
+    padding:20px;
+}
+
+.container{
+    max-width:600px;
+    margin:auto;
+    background:#444;
+    padding:25px;
+    border-radius:12px;
+    text-align:center;
+    box-shadow:0 0 20px #000;
+}
+
+h1{color:#4fc3f7}
+
+.button-group{
+    display:flex;
+    flex-wrap:wrap;
+    gap:10px;
+    justify-content:center;
+}
+
+.btn{
+    width:48%;
+    padding:12px;
+    border:none;
+    border-radius:8px;
+    cursor:pointer;
+    background:#2196f3;
+    color:#fff;
+    font-size:15px;
+}
+
+.btn:hover{background:#1976d2}
+
+.green{background:#4caf50}
+.red{background:#f44336}
+
+.info{
+    background:#333;
+    padding:10px;
+    margin:15px 0;
+    border-radius:8px;
+}
+.support{
+    background:#25d366;
+}
+
+.support:hover{
+    background:#1da851;
+}
+
+#msg{
+    display:none;
+    margin-top:15px;
+    padding:10px;
+    border-radius:6px;
+    font-weight:bold;
+}
+
+.footer{
+    margin-top:20px;
+    font-size:14px;
+    color:#ccc;
+}
+
+</style>
+</head>
+
+<body>
+
+<div class="container">
+
+<h1>کانفیگ رایگان📡</h1>
+
+<div class="info">
+📡 تعداد: <span id="count">0</span> |
+⏰ آخرین بروزرسانی: <span id="time">---</span>
+</div>
+
+<div class="button-group">
+
+<button class="btn green" id="refresh">🔄 بروزرسانی</button>
+<button class="btn" id="one">کپی 1️⃣</button>
+<button class="btn" id="five">کپی 5️⃣</button>
+<button class="btn support" id="support">
+💬 پشتیبانی تلگرام
+</button>
+
+<button class="btn" id="ten">کپی 🔟</button>
+<button class="btn" id="all">کپی همه🛰️</button>
+<button class="btn red" id="clear">🗑️ حذف کش</button>
+
+</div>
+
+<div id="msg"></div>
+
+<div class="footer" style="color: #000; background-color: #1976d2; border-radius: 5px; padding-bottom: 5px; " >
+نکته:اگر ربات خراب شد کش را حذف کنید!
+گانفیگ ها به صورت تصادفی انتخاب میشوند<br>
+</div>
+
+</div>
+
+<script>
+
+/* تنظیمات */
+
+const URL = "https://raw.githubusercontent.com/SoliSpirit/v2ray-configs/main/Countries/Us.txt";
+
+const CACHE = "VLESS_CACHE_PRO";
+const TIME = 30 * 60 * 1000;
+
+let configs = [];
+
+/* ابزار */
+
+function show(text,color){
+
+    let m = document.getElementById("msg");
+
+    m.innerText = text;
+    m.style.background = color;
+    m.style.display = "block";
+
+    setTimeout(()=>{
+        m.style.display="none";
+    },3000);
+}
+
+function now(){
+    return new Date().toLocaleString("fa-IR");
+}
+
+function shuffle(arr){
+    return arr.sort(()=>Math.random()-0.5);
+}
+
+/* کش */
+
+function save(){
+    localStorage.setItem(CACHE,JSON.stringify({
+        time:Date.now(),
+        list:configs
+    }));
+}
+
+function loadCache(){
+
+    let c = localStorage.getItem(CACHE);
+
+    if(!c) return false;
+
+    let data = JSON.parse(c);
+
+    if(Date.now()-data.time > TIME) return false;
+
+    configs = data.list;
+
+    updateUI(data.time);
+
+    show("⚡ از کش بارگذاری شد","#4caf50");
+
+    return true;
+}
+
+/* دریافت */
+
+async function fetchData(){
+
+    show("⏳ در حال دریافت...","#ff9800");
+
+    try{
+
+        let res = await fetch(URL);
+
+        if(!res.ok) throw "error";
+
+        let text = await res.text();
+
+        configs = text
+        .split("\n")
+        .map(l=>l.trim())
+        .filter(l=>/^(vless|vmess|trojan|ss):\/\//i.test(l));
+
+        save();
+
+        updateUI(Date.now());
+
+        show("✅ موفق: "+configs.length,"#4caf50");
+
+    }catch{
+
+        show("❌ خطا در اتصال","#f44336");
+    }
+}
+
+/* رابط */
+
+function updateUI(t){
+
+    document.getElementById("count").innerText=configs.length;
+
+    document.getElementById("time").innerText=
+    new Date(t).toLocaleString("fa-IR");
+}
+
+/* کپی */
+
+function copy(arr){
+
+    if(!arr.length){
+        show("❌ لیست خالی است","#f44336");
+        return;
+    }
+
+    let txt = arr.join("\n");
+
+    navigator.clipboard.writeText(txt).then(()=>{
+
+        show("✅ کپی شد: "+arr.length,"#4caf50");
+
+    }).catch(()=>{
+
+        show("❌ خطای کپی","#f44336");
+
+    });
+}
+
+/* شروع */
+
+document.addEventListener("DOMContentLoaded",()=>{
+
+    if(!loadCache()) fetchData();
+
+    document.getElementById("refresh").onclick=fetchData;
+
+    document.getElementById("clear").onclick=()=>{
+
+        localStorage.removeItem(CACHE);
+
+        show("🗑️ کش حذف شد","#2196f3");
+    };
+
+    document.getElementById("one").onclick=()=>copy(shuffle([...configs]).slice(0,1));
+
+    document.getElementById("five").onclick=()=>copy(shuffle([...configs]).slice(0,5));
+
+    document.getElementById("ten").onclick=()=>copy(shuffle([...configs]).slice(0,10));
+
+    document.getElementById("all").onclick=()=>copy(configs);
+
+});
+document.getElementById("support").onclick = ()=>{
+
+    window.open(
+        "https://t.me/BTC_ETH_DOG_SOL",
+        "_blank"
+    );
+
+};
+
+</script>
+
+</body>
+</html>
