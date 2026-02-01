@@ -134,7 +134,7 @@ h1 { color:#4fc3f7; margin-bottom: 25px; }
 </div>
 
 <!-- دکمه جمع و جور وسط صفحه -->
-<button id="one">کپی تصادفی 1️⃣</button>
+<button id="one">کپی کانفیگ</button>
 
 <!-- بقیه دکمه‌ها -->
 <div class="button-group">
@@ -177,7 +177,7 @@ function loadCache(){
     if(Date.now()-data.time > TIME) return false;
     configs = data.list;
     updateUI(data.time);
-    show("⚡ از کش بارگذاری شد","#4caf50");
+    show("از سرور بارگزاری شد","#4caf50");
     return true;
 }
 
@@ -239,44 +239,49 @@ function pickFromBottomToTop() {
 
 
 // کپی دونه‌ای
-function copyOne(){
-    let cfg = pickFromBottomToTop();
-    if(!cfg) return;
+function copyTextToClipboard(text) {
+    // روش مدرن
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text)
+            .then(() => show("✅ کپی شد","#4caf50"))
+            .catch(() => fallbackCopyTextToClipboard(text));
+    } else {
+        fallbackCopyTextToClipboard(text);
+    }
+}
 
-    // نمایش در Modal
+function copyOne() {
+    let cfg = pickFromBottomToTop();
+    if (!cfg) return;
+
     const modal = document.getElementById("copyModal");
     const modalText = document.getElementById("modalText");
     modalText.value = cfg;
+    modalText.focus();
+    modalText.select();
     modal.style.display = "flex";
 
-    // دکمه کپی داخل Modal
+    // دکمه کپی
     document.getElementById("modalCopy").onclick = () => {
-        navigator.clipboard.writeText(cfg)
-            .then(()=> {
-                show("✅ کپی شد","#4caf50");
+        copyTextToClipboard(cfg);
 
-                // بعد از کپی، خط بعدی آماده شود
-                let nextCfg = pickFromBottomToTop();
-                if(nextCfg){
-                    modalText.value = nextCfg; // متن Modal بروزرسانی شود
-                    cfg = nextCfg;             // برای کپی بعدی
-                } else {
-                    modalText.value = "";       // اگر تمام شد خالی شود
-                }
-            })
-            .catch(()=> show("❌ کپی نشد","#f44336"));
+        let nextCfg = pickFromBottomToTop();
+        if (nextCfg) {
+            modalText.value = nextCfg;
+            modalText.focus();
+            modalText.select();
+            cfg = nextCfg;
+        } else {
+            modalText.value = "";
+        }
     };
 
-    // دکمه بستن Modal
-    document.getElementById("modalClose").onclick = () => {
-        modal.style.display = "none";
-    };
-
-    // کلیک روی پس‌زمینه Modal هم ببندد
-    modal.onclick = (e) => {
-        if(e.target === modal) modal.style.display = "none";
-    };
+    document.getElementById("modalClose").onclick = () => modal.style.display = "none";
+    modal.onclick = (e) => { if (e.target === modal) modal.style.display = "none"; };
 }
+
+
+
 
 let currentIndex = -1; // شروع از پایین فایل (آخرین خط)
 
