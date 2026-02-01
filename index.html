@@ -121,6 +121,7 @@ h1 { color:#4fc3f7; margin-bottom: 25px; }
 </div>
 
 <script>
+// --- اینجا کدهای JS اصلاح شده را بگذارید ---
 const URL = "https://raw.githubusercontent.com/SoliSpirit/v2ray-configs/main/Countries/Us.txt";
 const CACHE = "VLESS_CACHE_PRO";
 const TIME = 30 * 60 * 1000;
@@ -158,8 +159,8 @@ async function fetchData(){
         if(!res.ok) throw "error";
         let text = await res.text();
         configs = text.split("\n")
-            .map(l=>l.trim())
-            .filter(l=>/^(vless|vmess|trojan|ss):\/\//i.test(l));
+            .map(l => l.trim())
+            .filter(l => l.length>0 && /^(vless|vmess|trojan|ss):\/\//i.test(l));
         save();
         updateUI(Date.now());
         show("✅ موفق: "+configs.length,"#4caf50");
@@ -174,15 +175,18 @@ function updateUI(t){
     document.getElementById("time").innerText=new Date(t).toLocaleString("fa-IR");
 }
 
-// انتخاب تصادفی از پایین فایل
-function pickRandomFromBottom(){
-    if(!configs.length){
+// انتخاب تصادفی از پایین فایل (آخرین 100 خط)
+function pickRandomFromBottom() {
+    if (!configs.length) {
         show("❌ لیست خالی است","#f44336");
         return null;
     }
-    let lastLines = configs.slice(-20);
-    return lastLines[Math.floor(Math.random()*lastLines.length)];
+    // تغییر عدد 20 به 100
+    const bottomLines = configs.slice(-100);
+    const randomIndex = Math.floor(Math.random() * bottomLines.length);
+    return bottomLines[randomIndex];
 }
+
 
 // کپی دونه‌ای
 function copyOne(){
@@ -191,9 +195,7 @@ function copyOne(){
     if(navigator.clipboard && navigator.clipboard.writeText){
         navigator.clipboard.writeText(cfg)
         .then(()=> show("✅ کپی شد","#4caf50"))
-        .catch(()=> {
-            prompt("⚠️ کپی نشد. لطفاً دستی کپی کنید:", cfg);
-        });
+        .catch(()=> prompt("⚠️ کپی نشد. لطفاً دستی کپی کنید:", cfg));
     }else{
         prompt("⚠️ کپی نشد. لطفاً دستی کپی کنید:", cfg);
     }
@@ -203,16 +205,12 @@ function copyOne(){
 document.addEventListener("DOMContentLoaded",()=>{
     if(!loadCache()) fetchData();
     document.getElementById("refresh").onclick=fetchData;
-    document.getElementById("clear").onclick=()=>{
-        localStorage.removeItem(CACHE);
-        show("🗑️ کش حذف شد","#2196f3");
-    };
+    document.getElementById("clear").onclick=()=>{ localStorage.removeItem(CACHE); show("🗑️ کش حذف شد","#2196f3"); };
     document.getElementById("one").onclick=copyOne;
-    document.getElementById("support").onclick=()=>{
-        window.open("https://t.me/BTC_ETH_DOG_SOL","_blank");
-    };
+    document.getElementById("support").onclick=()=>{ window.open("https://t.me/BTC_ETH_DOG_SOL","_blank"); };
 });
 </script>
+
 
 </body>
 </html>
