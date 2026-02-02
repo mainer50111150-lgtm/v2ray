@@ -154,6 +154,8 @@ h1 { color:#4fc3f7; margin-bottom: 25px; }
 // --- کدهای JS اصلاح شده با فیلتر ---
 const URL = "https://raw.githubusercontent.com/Epodonios/v2ray-configs/refs/heads/main/All_Configs_Sub.txt";
 const CACHE = "VLESS_CACHE_PRO";
+const USED_KEY = "USED_CONFIGS_PRO"; // کانفیگ‌های استفاده‌شده
+
 const TIME = 30 * 60 * 1000;
 let configs = [];
 let currentIndex = -1; // متغیر سراسری برای ردیابی آخرین خط کپی شده (شروع از پایین)
@@ -162,6 +164,22 @@ let currentIndex = -1; // متغیر سراسری برای ردیابی آخری
 // هر کلمه‌ای که در این آرایه باشد، اگر در لینک کانفیگ (vless://, vmess://) پیدا شود، آن لینک حذف خواهد شد.
 const FORBIDDEN_WORDS = ['کانال']; 
 // --- پایان تعریف کلمات فیلتر شونده ---
+
+// گرفتن لیست کانفیگ‌های استفاده شده
+function getUsedConfigs() {
+    return JSON.parse(localStorage.getItem(USED_KEY) || "[]");
+}
+
+function saveUsedConfig(cfg) {
+    let used = getUsedConfigs();
+    if (!used.includes(cfg)) {
+        used.push(cfg);
+        localStorage.setItem(USED_KEY, JSON.stringify(used));
+    }
+
+    // ذخیره آخرین شاخص
+    localStorage.setItem("LAST_INDEX", currentIndex);
+}
 
 
 // نمایش پیام
@@ -183,64 +201,98 @@ function loadCache() {
     if (!c) return false;
     let data = JSON.parse(c);
     if (Date.now() - data.time > TIME) return false;
+    
     configs = data.list;
-    currentIndex = configs.length - 1; // تنظیم شاخص روی آخرین خط برای شروع از پایین
+
+    // بارگذاری شاخص آخرین کانفیگ
+    let savedIndex = parseInt(localStorage.getItem("LAST_INDEX"));
+    if (!isNaN(savedIndex)) {
+        currentIndex = savedIndex;
+    } else {
+        currentIndex = configs.length - 1;
+    }
+
     updateUI(data.time);
     show("✅ از کش بارگزاری شد","#4caf50");
     return true;
 }
 
+
 // تابع فیلتر
 function filterConfigs(rawText) {
     let lines = rawText.split("\n")
         .map(l => l.trim())
-        .filter(l => l.length > 0 && /^(vless|vmess|trojan|ss):\/\//i.test(l));
-    
+        .filter(l =>
+            l.length > 0 &&
+            /^(vless|vmess|trojan|ss):\/\//i.test(l)
+        );
+
     let filteredList = [];
     let removedCount = 0;
 
     for (const line of lines) {
         let shouldKeep = true;
+
         for (const word of FORBIDDEN_WORDS) {
-            // بررسی می‌کند که آیا کلمه فیلتر شده در متن لینک وجود دارد (case-insensitive)
             if (line.toLowerCase().includes(word.toLowerCase())) {
                 shouldKeep = false;
                 removedCount++;
                 break;
             }
         }
-        if (shouldKeep) {
-            filteredList.push(line);
-        }
+
+        if (shouldKeep) filteredList.push(line);
     }
 
-    show(`⚠️ ${removedCount} کانفیگ به دلیل وجود کلمات فیلتر شده حذف شدند.`, "#ff9800");
+    show(`⚠️ ${removedCount} کانفیگ فیلتر شد`, "#ff9800");
+
     return filteredList;
 }
 
 
-// دریافت فایل
+
+
 async function fetchData() {
-    show("⏳ در حال دریافت و فیلتر کردن داده‌ها...","#ff9800");
+
+    if (configs.length && currentIndex >= 0) return;
+
+    show("⏳ در حال بروزرسانی...","#ff9800");
+
     try {
-        let res = await fetch(URL);
+
+        let res = await fetch(URL + "?v=" + Date.now());
         if (!res.ok) throw "error";
+
         let text = await res.text();
-        
-        // استفاده از تابع فیلتر جدید
-        configs = filterConfigs(text); 
-        
-        currentIndex = configs.length - 1; // تنظیم شاخص پس از دریافت موفق
+
+        let used = getUsedConfigs();
+
+        let all = filterConfigs(text);
+
+        // حذف مصرف‌شده‌ها
+        let fresh = all.filter(c => !used.includes(c));
+
+        if (!fresh.length) {
+            show("⚠️ کانفیگ جدیدی نیست","#ff9800");
+            return;
+        }
+
+        configs = fresh;
+        currentIndex = configs.length - 1;
+
         save();
         updateUI(Date.now());
-        show(`✅ موفق: ${configs.length} کانفیگ قابل استفاده یافت شد`,"#4caf50");
+
+        show(`✅ ${configs.length} کانفیگ جدید آماده شد`,"#4caf50");
+
     } catch {
-        // اگر fetch شکست خورد، سعی می‌کنیم از کش استفاده کنیم (اگر کشی وجود داشته باشد)
-        if (!loadCache()) {
-            show("❌ خطا در اتصال و کشی موجود نیست","#f44336");
-        }
+
+        show("❌ خطا در دریافت","#f44336");
+
     }
 }
+
+
 
 // بروزرسانی UI
 function updateUI(t) {
@@ -257,21 +309,23 @@ function getNextConfig() {
         return null;
     }
 
-    // اگر currentIndex هنوز روی -1 است، اولین بار است که اجرا می شود
-    if (currentIndex === -1) {
-        currentIndex = configs.length - 1; // شروع از آخرین خط (بالاترین خط در لیست)
-    } else {
-        currentIndex--; // حرکت به سمت خطوط قدیمی‌تر (پایین‌تر در فایل)
+    const used = getUsedConfigs();
+
+    while (currentIndex >= 0) {
+        let cfg = configs[currentIndex];
+        currentIndex--; // حرکت به کانفیگ قدیمی‌تر
+
+        // اگر کانفیگ قبلاً استفاده نشده بود، برگردان
+        if (!used.includes(cfg)) {
+            return cfg;
+        }
     }
 
-    if (currentIndex < 0) {
-        show("⚠️ تمام خطوط کپی شدند، لطفاً بروزرسانی کنید","#ff9800");
-        currentIndex = -1; // ریست کردن برای تلاش مجدد در آینده
-        return null; 
-    }
-
-    return configs[currentIndex];
+    show("⚠️ تمام خطوط کپی شدند، لطفاً بروزرسانی کنید","#ff9800");
+    currentIndex = -1; // ریست کردن برای تلاش بعدی
+    return null;
 }
+
 
 // تابع کمکی برای کپی کردن متن (با سازگاری موبایل)
 function copyTextToClipboard(text) {
@@ -326,52 +380,81 @@ function copyOneSequential() {
     const modalCopyButton = document.getElementById("modalCopy");
     const modalCloseButton = document.getElementById("modalClose");
 
-    // 1. نمایش Modal با متن کانفیگ فعلی
+    // نمایش مودال
     modal.style.display = "flex";
     modalText.value = cfg;
-    
-    // 2. کپی خودکار متن نمایش داده شده در Modal
-    copyTextToClipboard(cfg); 
 
-    // 3. تنظیم عملکرد دکمه "کانفیگ بعدی" در Modal
+    // ذخیره اولین کانفیگ
+    saveUsedConfig(cfg);
+
+    // کپی خودکار
+    copyTextToClipboard(cfg);
+
+    // دکمه بعدی
     modalCopyButton.onclick = () => {
+
         let nextCfg = getNextConfig();
+
         if (nextCfg) {
+
             modalText.value = nextCfg;
-            copyTextToClipboard(nextCfg); // کپی خودکار کانفیگ بعدی
+
+            copyTextToClipboard(nextCfg);
+
+            // ذخیره همه کانفیگ‌ها
+            saveUsedConfig(nextCfg);
+
         } else {
+
             modalText.value = "همه خطوط تمام شد.";
             modalCopyButton.disabled = true;
+
         }
     };
 
-    // 4. تنظیم عملکرد دکمه بستن Modal
+    // بستن
     modalCloseButton.onclick = () => modal.style.display = "none";
-    modal.onclick = (e) => { if (e.target === modal) modal.style.display = "none"; };
+
+    modal.onclick = (e) => {
+        if (e.target === modal) modal.style.display = "none";
+    };
 }
+
 
 
 // شروع
 document.addEventListener("DOMContentLoaded", () => {
-    
-    // **تغییر کلیدی:** حذف کش بلافاصله پس از لود شدن DOM
-    localStorage.removeItem(CACHE); 
-    show("🗑️ کش قبلی پاک شد، در حال دریافت داده‌های جدید...","#2196f3"); 
+// بروزرسانی خودکار هر 1 دقیقه
+setInterval(() => {
+    fetchData();
+}, 120000); // 60000 میلی‌ثانیه = 1 دقیقه
 
-    // اجرای fetchData با تاخیر یک ثانیه (برای اینکه پیام پاک شدن کش اول نمایش داده شود)
-    setTimeout(fetchData, 1000); 
-    
+    // اول سعی کن از کش بخواند
+    if (!loadCache()) {
+        show("⏳ در حال دریافت داده‌های جدید...","#2196f3");
+        fetchData();
+    }
+
     // Event Listeners
     document.getElementById("refresh").onclick = fetchData;
+
     document.getElementById("clear").onclick = () => { 
         localStorage.removeItem(CACHE); 
-        currentIndex = -1; // ریست کردن شاخص کپی
-        configs = []; // پاک کردن لیست در حافظه
-        document.getElementById("count").innerText=0;
-        show("🗑️ کش حذف شد و لیست پاک گردید. دوباره بروزرسانی کنید","#2196f3"); 
+        localStorage.removeItem(USED_KEY);
+
+        currentIndex = -1;
+        configs = [];
+
+        document.getElementById("count").innerText = 0;
+
+        show("🗑️ همه داده‌ها پاک شد","#2196f3"); 
     };
-    document.getElementById("one").onclick = copyOneSequential; // تغییر نام تابع اصلی
-    document.getElementById("support").onclick = () => { window.open("https://t.me/BTC_ETH_DOG_SOL", "_blank"); };
+
+    document.getElementById("one").onclick = copyOneSequential;
+
+    document.getElementById("support").onclick = () => {
+        window.open("https://t.me/BTC_ETH_DOG_SOL", "_blank");
+    };
 });
 
 </script>
