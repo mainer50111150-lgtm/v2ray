@@ -151,169 +151,187 @@ h1 { color:#4fc3f7; margin-bottom: 25px; }
 </div>
 
 <script>
-// --- اینجا کدهای JS اصلاح شده را بگذارید ---
+// --- کدهای JS اصلاح شده ---
 const URL = "https://raw.githubusercontent.com/SoliSpirit/v2ray-configs/main/Countries/Us.txt";
 const CACHE = "VLESS_CACHE_PRO";
 const TIME = 30 * 60 * 1000;
 let configs = [];
+let currentIndex = -1; // متغیر سراسری برای ردیابی آخرین خط کپی شده (شروع از پایین فایل)
 
 // نمایش پیام
-function show(text,color){
+function show(text, color) {
     let m = document.getElementById("msg");
     m.innerText = text;
     m.style.background = color;
     m.style.display = "block";
-    setTimeout(()=>{ m.style.display="none"; },3000);
+    setTimeout(() => { m.style.display = "none"; }, 3000);
 }
 
 // کش
-function save(){
-    localStorage.setItem(CACHE,JSON.stringify({time:Date.now(),list:configs}));
+function save() {
+    localStorage.setItem(CACHE, JSON.stringify({ time: Date.now(), list: configs }));
 }
-function loadCache(){
+
+function loadCache() {
     let c = localStorage.getItem(CACHE);
-    if(!c) return false;
+    if (!c) return false;
     let data = JSON.parse(c);
-    if(Date.now()-data.time > TIME) return false;
+    if (Date.now() - data.time > TIME) return false;
     configs = data.list;
+    currentIndex = configs.length - 1; // تنظیم شاخص روی آخرین خط برای شروع از پایین
     updateUI(data.time);
-    show("از سرور بارگزاری شد","#4caf50");
+    show("از کش بارگزاری شد","#4caf50");
     return true;
 }
 
 // دریافت فایل
-async function fetchData(){
+async function fetchData() {
     show("⏳ در حال دریافت...","#ff9800");
-    try{
+    try {
         let res = await fetch(URL);
-        if(!res.ok) throw "error";
+        if (!res.ok) throw "error";
         let text = await res.text();
         configs = text.split("\n")
             .map(l => l.trim())
-            .filter(l => l.length>0 && /^(vless|vmess|trojan|ss):\/\//i.test(l));
+            .filter(l => l.length > 0 && /^(vless|vmess|trojan|ss):\/\//i.test(l));
+        
+        currentIndex = configs.length - 1; // تنظیم شاخص پس از دریافت موفق
         save();
         updateUI(Date.now());
-        show("✅ موفق: "+configs.length,"#4caf50");
-    }catch{
-        show("❌ خطا در اتصال","#f44336");
+        show(`✅ موفق: ${configs.length} کانفیگ یافت شد`,"#4caf50");
+    } catch {
+        show("❌ خطا در اتصال یا دریافت داده","#f44336");
     }
 }
 
 // بروزرسانی UI
-function updateUI(t){
-    document.getElementById("count").innerText=configs.length;
-    document.getElementById("time").innerText=new Date(t).toLocaleString("fa-IR");
+function updateUI(t) {
+    document.getElementById("count").innerText = configs.length;
+    document.getElementById("time").innerText = new Date(t).toLocaleString("fa-IR");
 }
 
-// انتخاب تصادفی از پایین فایل (آخرین 100 خط)
-function pickRandomFromBottom() {
+
+// --- منطق جدید کپی ترتیبی از پایین به بالا ---
+
+function getNextConfig() {
     if (!configs.length) {
-        show("❌ لیست خالی است","#f44336");
-        return null;
-    }
-    // تغییر عدد 20 به 100
-    const bottomLines = configs.slice(-100);
-    const randomIndex = Math.floor(Math.random() * bottomLines.length);
-    return bottomLines[randomIndex];
-}
-function pickFromBottomToTop() {
-    if (!configs.length) {
-        show("❌ لیست خالی است","#f44336");
+        show("❌ لیست کانفیگ‌ها خالی است","#f44336");
         return null;
     }
 
-    // اگر هنوز شروع نکردیم، از آخرین خط شروع کنیم
+    // اگر currentIndex هنوز روی -1 است، اولین بار است که اجرا می شود
     if (currentIndex === -1) {
-        currentIndex = configs.length - 1;
+        currentIndex = configs.length - 1; // شروع از آخرین خط (بالاترین خط در لیست)
     } else {
-        currentIndex--; // حرکت به سمت بالای فایل
+        currentIndex--; // حرکت به سمت خطوط قدیمی‌تر (پایین‌تر در فایل)
     }
 
     if (currentIndex < 0) {
-        show("⚠️ تمام خطوط کپی شدند","#ff9800");
-        return null; // وقتی تمام خطوط کپی شدند
+        show("⚠️ تمام خطوط کپی شدند، لطفاً کش را حذف یا بروزرسانی کنید","#ff9800");
+        currentIndex = -1; // ریست کردن برای تلاش مجدد در آینده
+        return null; 
     }
 
     return configs[currentIndex];
 }
 
-
-// کپی دونه‌ای
+// تابع کمکی برای کپی کردن متن (با سازگاری موبایل)
 function copyTextToClipboard(text) {
-    // روش مدرن
+    // 1. تلاش برای استفاده از Clipboard API مدرن
     if (navigator.clipboard && navigator.clipboard.writeText) {
-        navigator.clipboard.writeText(text)
-            .then(() => show("✅ کپی شد","#4caf50"))
-            .catch(() => fallbackCopyTextToClipboard(text));
+        navigator.clipboard.writeText(text).then(() => {
+            show("✅ کپی شد","#4caf50");
+        }).catch(() => {
+            // 2. اگر روش مدرن شکست خورد، به روش قدیمی بروید (مخصوصاً اندروید)
+            fallbackCopyText(text);
+        });
     } else {
-        fallbackCopyTextToClipboard(text);
+        // اگر مرورگر اصلاً Clipboard API را ندارد
+        fallbackCopyText(text);
     }
 }
 
-function copyOne() {
-    let cfg = pickFromBottomToTop();
+// Fallback برای کپی کردن (مهم برای اندروید)
+function fallbackCopyText(text) {
+    let textArea = document.createElement("textarea");
+    textArea.value = text;
+    
+    // تنظیمات برای پنهان کردن textarea
+    textArea.style.position = "fixed";
+    textArea.style.top = "0";
+    textArea.style.left = "0";
+    textArea.style.opacity = "0";
+    
+    document.body.appendChild(textArea);
+    textArea.focus();
+    textArea.select();
+
+    try {
+        document.execCommand('copy');
+        show("✅ کپی شد (Fallback)","#4caf50");
+    } catch (err) {
+        show("❌ کپی با شکست مواجه شد","#f44336");
+        console.error('Fallback copy failed:', err);
+    }
+
+    document.body.removeChild(textArea);
+}
+
+
+// تابع اصلی که هنگام کلیک روی دکمه "کپی کانفیگ" فراخوانی می شود
+function copyOneSequential() {
+    let cfg = getNextConfig();
     if (!cfg) return;
 
     const modal = document.getElementById("copyModal");
     const modalText = document.getElementById("modalText");
+    const modalCopyButton = document.getElementById("modalCopy");
+    const modalCloseButton = document.getElementById("modalClose");
 
-    modal.style.display = "flex";       // اول نمایش Modal
-    modalText.value = cfg;               // بعد متن داخل textarea
-    autoCopyToClipboard(modalText);      // بعد کپی خودکار
+    // 1. نمایش Modal با متن کانفیگ فعلی
+    modal.style.display = "flex";
+    modalText.value = cfg;
+    
+    // 2. کپی خودکار متن نمایش داده شده در Modal
+    copyTextToClipboard(cfg); 
 
-    modalText.focus();
-    modalText.select();
-
-    // دکمه کپی
-    document.getElementById("modalCopy").onclick = () => {
-        autoCopyToClipboard(modalText); // با autoCopyToClipboard کپی شود
-
-        let nextCfg = pickFromBottomToTop();
+    // 3. تنظیم عملکرد دکمه "کانفیگ بعدی" در Modal
+    modalCopyButton.onclick = () => {
+        let nextCfg = getNextConfig();
         if (nextCfg) {
             modalText.value = nextCfg;
-            autoCopyToClipboard(modalText); // متن جدید هم خودکار کپی شود
-            cfg = nextCfg;
+            copyTextToClipboard(nextCfg); // کپی خودکار کانفیگ بعدی
         } else {
-            modalText.value = "";
+            modalText.value = "همه خطوط تمام شد.";
+            modalCopyButton.disabled = true;
         }
     };
 
-    // بستن Modal
-    document.getElementById("modalClose").onclick = () => modal.style.display = "none";
+    // 4. تنظیم عملکرد دکمه بستن Modal
+    modalCloseButton.onclick = () => modal.style.display = "none";
     modal.onclick = (e) => { if (e.target === modal) modal.style.display = "none"; };
 }
 
-function autoCopyToClipboard(textArea) {
-    textArea.focus();
-    textArea.select();
-    try {
-        if(navigator.clipboard && navigator.clipboard.writeText){
-            navigator.clipboard.writeText(textArea.value);
-        } else {
-            document.execCommand('copy'); // fallback برای موبایل
-        }
-        show("✅ کپی شد","#4caf50");
-    } catch(e){
-        show("❌ کپی نشد","#f44336");
-    }
-}
-
-
-
-
-
-let currentIndex = -1; // شروع از پایین فایل (آخرین خط)
-
-
 
 // شروع
-document.addEventListener("DOMContentLoaded",()=>{
-    if(!loadCache()) fetchData();
-    document.getElementById("refresh").onclick=fetchData;
-    document.getElementById("clear").onclick=()=>{ localStorage.removeItem(CACHE); show("🗑️ کش حذف شد","#2196f3"); };
-    document.getElementById("one").onclick=copyOne;
-    document.getElementById("support").onclick=()=>{ window.open("https://t.me/BTC_ETH_DOG_SOL","_blank"); };
+document.addEventListener("DOMContentLoaded", () => {
+    if (!loadCache()) {
+        fetchData();
+    }
+    
+    // Event Listeners
+    document.getElementById("refresh").onclick = fetchData;
+    document.getElementById("clear").onclick = () => { 
+        localStorage.removeItem(CACHE); 
+        currentIndex = -1; // ریست کردن شاخص کپی
+        configs = []; // پاک کردن لیست در حافظه
+        document.getElementById("count").innerText=0;
+        show("🗑️ کش حذف شد و لیست پاک گردید","#2196f3"); 
+    };
+    document.getElementById("one").onclick = copyOneSequential; // تغییر نام تابع اصلی
+    document.getElementById("support").onclick = () => { window.open("https://t.me/BTC_ETH_DOG_SOL", "_blank"); };
 });
+
 </script>
 
 
