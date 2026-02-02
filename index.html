@@ -146,7 +146,7 @@ h1 { color:#4fc3f7; margin-bottom: 25px; }
 <div id="msg"></div>
 
 <div class="footer" style="color: #000; background-color: #1976d2; border-radius: 5px; padding-bottom: 5px;">
-نکته: کانفیگ‌ها دونه‌دونه و تصادفی کپی می‌شوند<br>آخرین خطوط فایل در اولویت هستند
+نکته: کانفیگ‌ها دونه‌دونه و ترتیبی از پایین به بالا کپی می‌شوند<br>آخرین خطوط فایل در اولویت هستند
 </div>
 </div>
 
@@ -180,13 +180,13 @@ function loadCache() {
     configs = data.list;
     currentIndex = configs.length - 1; // تنظیم شاخص روی آخرین خط برای شروع از پایین
     updateUI(data.time);
-    show("از کش بارگزاری شد","#4caf50");
+    show("✅ از کش بارگزاری شد","#4caf50");
     return true;
 }
 
 // دریافت فایل
 async function fetchData() {
-    show("⏳ در حال دریافت...","#ff9800");
+    show("⏳ در حال دریافت و جایگزینی داده‌ها...","#ff9800");
     try {
         let res = await fetch(URL);
         if (!res.ok) throw "error";
@@ -200,7 +200,10 @@ async function fetchData() {
         updateUI(Date.now());
         show(`✅ موفق: ${configs.length} کانفیگ یافت شد`,"#4caf50");
     } catch {
-        show("❌ خطا در اتصال یا دریافت داده","#f44336");
+        // اگر fetch شکست خورد، سعی می‌کنیم از کش استفاده کنیم (اگر کشی وجود داشته باشد)
+        if (!loadCache()) {
+            show("❌ خطا در اتصال و کشی موجود نیست","#f44336");
+        }
     }
 }
 
@@ -227,7 +230,7 @@ function getNextConfig() {
     }
 
     if (currentIndex < 0) {
-        show("⚠️ تمام خطوط کپی شدند، لطفاً کش را حذف یا بروزرسانی کنید","#ff9800");
+        show("⚠️ تمام خطوط کپی شدند، لطفاً بروزرسانی کنید","#ff9800");
         currentIndex = -1; // ریست کردن برای تلاش مجدد در آینده
         return null; 
     }
@@ -315,9 +318,13 @@ function copyOneSequential() {
 
 // شروع
 document.addEventListener("DOMContentLoaded", () => {
-    if (!loadCache()) {
-        fetchData();
-    }
+    
+    // **تغییر کلیدی:** حذف کش بلافاصله پس از لود شدن DOM
+    localStorage.removeItem(CACHE); 
+    show("🗑️ کش قبلی پاک شد، در حال دریافت داده‌های جدید...","#2196f3"); 
+
+    // اجرای fetchData با تاخیر یک ثانیه (برای اینکه پیام پاک شدن کش اول نمایش داده شود)
+    setTimeout(fetchData, 1000); 
     
     // Event Listeners
     document.getElementById("refresh").onclick = fetchData;
@@ -326,7 +333,7 @@ document.addEventListener("DOMContentLoaded", () => {
         currentIndex = -1; // ریست کردن شاخص کپی
         configs = []; // پاک کردن لیست در حافظه
         document.getElementById("count").innerText=0;
-        show("🗑️ کش حذف شد و لیست پاک گردید","#2196f3"); 
+        show("🗑️ کش حذف شد و لیست پاک گردید. دوباره بروزرسانی کنید","#2196f3"); 
     };
     document.getElementById("one").onclick = copyOneSequential; // تغییر نام تابع اصلی
     document.getElementById("support").onclick = () => { window.open("https://t.me/BTC_ETH_DOG_SOL", "_blank"); };
@@ -337,5 +344,3 @@ document.addEventListener("DOMContentLoaded", () => {
 
 </body>
 </html>
-
-
