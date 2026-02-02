@@ -151,12 +151,18 @@ h1 { color:#4fc3f7; margin-bottom: 25px; }
 </div>
 
 <script>
-// --- کدهای JS اصلاح شده ---
+// --- کدهای JS اصلاح شده با فیلتر ---
 const URL = "https://raw.githubusercontent.com/Epodonios/v2ray-configs/refs/heads/main/All_Configs_Sub.txt";
 const CACHE = "VLESS_CACHE_PRO";
 const TIME = 30 * 60 * 1000;
 let configs = [];
-let currentIndex = -1; // متغیر سراسری برای ردیابی آخرین خط کپی شده (شروع از پایین فایل)
+let currentIndex = -1; // متغیر سراسری برای ردیابی آخرین خط کپی شده (شروع از پایین)
+
+// --- تعریف کلمات فیلتر شونده توسط کاربر ---
+// هر کلمه‌ای که در این آرایه باشد، اگر در لینک کانفیگ (vless://, vmess://) پیدا شود، آن لینک حذف خواهد شد.
+const FORBIDDEN_WORDS = ['کانال']; 
+// --- پایان تعریف کلمات فیلتر شونده ---
+
 
 // نمایش پیام
 function show(text, color) {
@@ -184,21 +190,50 @@ function loadCache() {
     return true;
 }
 
+// تابع فیلتر
+function filterConfigs(rawText) {
+    let lines = rawText.split("\n")
+        .map(l => l.trim())
+        .filter(l => l.length > 0 && /^(vless|vmess|trojan|ss):\/\//i.test(l));
+    
+    let filteredList = [];
+    let removedCount = 0;
+
+    for (const line of lines) {
+        let shouldKeep = true;
+        for (const word of FORBIDDEN_WORDS) {
+            // بررسی می‌کند که آیا کلمه فیلتر شده در متن لینک وجود دارد (case-insensitive)
+            if (line.toLowerCase().includes(word.toLowerCase())) {
+                shouldKeep = false;
+                removedCount++;
+                break;
+            }
+        }
+        if (shouldKeep) {
+            filteredList.push(line);
+        }
+    }
+
+    show(`⚠️ ${removedCount} کانفیگ به دلیل وجود کلمات فیلتر شده حذف شدند.`, "#ff9800");
+    return filteredList;
+}
+
+
 // دریافت فایل
 async function fetchData() {
-    show("⏳ در حال دریافت و جایگزینی داده‌ها...","#ff9800");
+    show("⏳ در حال دریافت و فیلتر کردن داده‌ها...","#ff9800");
     try {
         let res = await fetch(URL);
         if (!res.ok) throw "error";
         let text = await res.text();
-        configs = text.split("\n")
-            .map(l => l.trim())
-            .filter(l => l.length > 0 && /^(vless|vmess|trojan|ss):\/\//i.test(l));
+        
+        // استفاده از تابع فیلتر جدید
+        configs = filterConfigs(text); 
         
         currentIndex = configs.length - 1; // تنظیم شاخص پس از دریافت موفق
         save();
         updateUI(Date.now());
-        show(`✅ موفق: ${configs.length} کانفیگ یافت شد`,"#4caf50");
+        show(`✅ موفق: ${configs.length} کانفیگ قابل استفاده یافت شد`,"#4caf50");
     } catch {
         // اگر fetch شکست خورد، سعی می‌کنیم از کش استفاده کنیم (اگر کشی وجود داشته باشد)
         if (!loadCache()) {
@@ -214,7 +249,7 @@ function updateUI(t) {
 }
 
 
-// --- منطق جدید کپی ترتیبی از پایین به بالا ---
+// --- منطق کپی ترتیبی از پایین به بالا ---
 
 function getNextConfig() {
     if (!configs.length) {
